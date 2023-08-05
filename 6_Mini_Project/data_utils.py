@@ -59,52 +59,50 @@ class load_data():
         
 
     def _path_to_dict(self, image_paths):
-        path_dict = dict()
+        path_dict = {}
         for image_path in image_paths:
             num_path = int(os.path.basename(image_path[:-4]))
             path_dict[num_path] = image_path
         return path_dict
 
     def _merge_image_df(self, df, path_dict):
-        split_path_dict = dict()
-        for index, row in df.iterrows():
-            split_path_dict[row['id']] = path_dict[row['id']]
+        split_path_dict = {
+            row['id']: path_dict[row['id']] for index, row in df.iterrows()
+        }
         image_frame = pd.DataFrame(list(split_path_dict.values()), columns=['image'])
-        df_image =  pd.concat([image_frame, df], axis=1)
-        return df_image
+        return pd.concat([image_frame, df], axis=1)
         
     def _make_dataset(self, df, image_shape, t_train=None):
         # make dataset
-        data = dict()
+        data = {}
         # merge image with 3x64 features
         for i, dat in enumerate(df.iterrows()):
             index, row = dat
-            sample = dict()
             if t_train is not None:
                 features = row.drop(['id', 'species', 'image'], axis=0).values
             else:
                 features = row.drop(['id', 'image'], axis=0).values
-            sample['margin'] = features[:64]
-            sample['shape'] = features[64:128]
-            sample['texture'] = features[128:]
+            sample = {
+                'margin': features[:64],
+                'shape': features[64:128],
+                'texture': features[128:],
+            }
             if t_train is not None:
                 sample['t'] = np.asarray(t_train[i], dtype='int32')
             image = imread(row['image'], as_gray=True)
             image = pad2square(image)
             image = resize(image, output_shape=image_shape, mode='reflect', anti_aliasing=True)
             image = np.expand_dims(image, axis=2)
-            sample['image'] = image   
+            sample['image'] = image
             data[row['id']] = sample
             if i % 100 == 0:
                 print("\t%d of %d" % (i, len(df)))
         return data
 
     def _format_dataset(self, df, for_train):
-        # making arrays with all data in, is nessesary when doing validation split
-        data = dict()
         value = list(df.values())[0]
         img_tot_shp = tuple([len(df)] + list(value['image'].shape))
-        data['images'] = np.zeros(img_tot_shp, dtype='float32')
+        data = {'images': np.zeros(img_tot_shp, dtype='float32')}
         feature_tot_shp = (len(df), 64)
         data['margins'] = np.zeros(feature_tot_shp, dtype='float32')
         data['shapes'] = np.zeros(feature_tot_shp, dtype='float32')
@@ -152,13 +150,16 @@ class batch_generator():
 
     def _batch_init(self, purpose):
         assert purpose in ['train', 'valid', 'test']
-        batch_holder = dict()
-        batch_holder['margins'] = np.zeros((self._batch_size, self._num_features), dtype='float32')
+        batch_holder = {
+            'margins': np.zeros(
+                (self._batch_size, self._num_features), dtype='float32'
+            )
+        }
         batch_holder['shapes'] = np.zeros((self._batch_size, self._num_features), dtype='float32')
         batch_holder['textures'] = np.zeros((self._batch_size, self._num_features), dtype='float32')
         batch_holder['images'] = np.zeros(tuple([self._batch_size] + self._image_shape), dtype='float32')
-        if (purpose == "train") or (purpose == "valid"):
-            batch_holder['ts'] = np.zeros((self._batch_size, self._num_classes), dtype='float32')          
+        if purpose in ["train", "valid"]:
+            batch_holder['ts'] = np.zeros((self._batch_size, self._num_classes), dtype='float32')
         else:
             batch_holder['ids'] = []
         return batch_holder

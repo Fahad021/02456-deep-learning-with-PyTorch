@@ -23,9 +23,7 @@ valid_characters = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', EOS] + \
 
 
 def print_valid_characters():
-    l = ''
-    for i, c in enumerate(valid_characters):
-        l += "\'%s\'=%i,\t" % (c, i)
+    l = ''.join("\'%s\'=%i,\t" % (c, i) for i, c in enumerate(valid_characters))
     print("Number of valid characters:", len(valid_characters))
     print(l)
 
@@ -98,7 +96,7 @@ def generate(batch_size=100, min_len=3, max_len=3, invalid_set=set()):
         # print('int_targets_out', type(int_targets_out), int_targets_out)
 
     # create the input matrix, mask and seq_len - note that we zero pad the shorter sequences.
-    max_input_len = max([len(list(i)) for i in int_inputs])
+    max_input_len = max(len(list(i)) for i in int_inputs)
     inputs = np.zeros((batch_size, max_input_len))
     # input_masks = np.zeros((batch_size,max_input_len))
     for (i, inp) in enumerate(int_inputs):
@@ -111,7 +109,7 @@ def generate(batch_size=100, min_len=3, max_len=3, invalid_set=set()):
     # print('inputs_seqlen', type(inputs_seqlen), inputs_seqlen)
 
     # max_target_in_len = max(map(len, int_targets_in))
-    max_target_in_len = max([len(list(i)) for i in int_targets_in])
+    max_target_in_len = max(len(list(i)) for i in int_targets_in)
     targets_in = np.zeros((batch_size, max_target_in_len))
     targets_mask = np.zeros((batch_size, max_target_in_len))
     for (i, tar) in enumerate(int_targets_in):
@@ -132,7 +130,9 @@ def generate(batch_size=100, min_len=3, max_len=3, invalid_set=set()):
         targets_out[i, :cur_len] = tar
         targets_mask[i, :cur_len] = 1
 
-    print("Generated batch length {} from {} iterations".format(len(text_inputs), iterations))
+    print(
+        f"Generated batch length {len(text_inputs)} from {iterations} iterations"
+    )
 
     return inputs.astype('int32'), \
         inputs_seqlen.astype('int32'), \
